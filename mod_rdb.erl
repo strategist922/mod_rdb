@@ -335,6 +335,7 @@ remove_user(RDBHost, UserJID, Name) ->
     check_doc(RDBHost, Name).
 
 check_doc(RDBHost, Name) ->
+    [BotJID] = mnesia:dirty_read(rdb_doc, {RDBHost, Name}),
     case mnesia:activity(async_dirty, fun() ->
         Q = qlc:q([X || X <- mnesia:table(rdb_route),
             X#rdb_route.rdb_host_name =:= {RDBHost, Name}]),
@@ -346,8 +347,13 @@ check_doc(RDBHost, Name) ->
         case lists:any(fun(Route) ->
             {_, _, To} = Route,
             case To of
-            {jid, _} ->
-                true;
+            {jid, JID} ->
+                case JID of
+                BotJID ->
+                    false;
+                _ ->
+                    true
+                end;
             {pid, _} ->
                 false
             end
